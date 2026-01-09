@@ -19,38 +19,73 @@ import { useSPK } from '../contexts/SPKContext';
 import { validateSalesForm } from '../utils/validation';
 
 // Mitsubishi unit options
+// Mitsubishi Unit Options
 const UNIT_OPTIONS = [
-    'Xpander Ultimate',
-    'Xpander Cross',
-    'Xpander Exceed',
-    'Xpander GLS',
-    'Pajero Sport Dakar Ultimate',
-    'Pajero Sport Dakar',
-    'Pajero Sport Exceed',
-    'XForce Ultimate',
-    'XForce Premium',
-    'XForce Exceed',
-    'L300 Pick Up',
-    'L300 Box',
-    'Triton HDX',
-    'Triton GLX',
-    'Outlander PHEV',
+    // Mitsubishi Destinator
+    'Destinator GLS CVT',
+    'Destinator Exceed CVT',
+    'Destinator Ultimate CVT',
+    'Destinator Ultimate Premium',
+    // Mitsubishi Xforce
+    'Xforce Exceed CVT',
+    'Xforce Ultimate CVT',
+    'Xforce Ultimate with Diamond Sense (DS)',
+    // New Pajero Sport
+    'Pajero Sport GLX (4x4) MT',
+    'Pajero Sport Exceed (4x2) MT',
+    'Pajero Sport Exceed (4x2) AT',
+    'Pajero Sport Dakar (4x2) AT',
+    'Pajero Sport Dakar Ultimate (4x2) AT',
+    'Pajero Sport Dakar Ultimate (4x4) AT',
+    // New Xpander
+    'Xpander GLS MT',
+    'Xpander GLS CVT',
+    'Xpander Exceed MT',
+    'Xpander Exceed CVT',
+    'Xpander Ultimate CVT',
+    // New Xpander Cross
+    'Xpander Cross MT',
+    'Xpander Cross Premium CVT',
+    // All New Triton
+    'Triton Single Cab GLX 4x2',
+    'Triton Single Cab HDX 4x4',
+    'Triton Double Cab HDX 4x4',
+    'Triton Double Cab GLS 4x4',
+    'Triton Double Cab Exceed 4x4',
+    'Triton Double Cab Ultimate 4x4 AT',
+    // Mitsubishi L300
+    'L300 Pick-Up Flat Deck',
+    'L300 Cab Chassis',
+    // Mitsubishi L100 EV
+    'L100 EV (Minicab MiEV)',
 ];
 
+// Mitsubishi Color Options
 const COLOR_OPTIONS = [
-    'Quartz White Pearl',
-    'Jet Black Mica',
-    'Graphite Gray Metallic',
-    'Sterling Silver Metallic',
-    'Red Metallic',
-    'Deep Bronze Metallic',
+    // Warna Utama & Metalik
     'Blade Silver Metallic',
-    'Sunrise Orange Metallic',
+    'Quartz White Pearl (Premium)',
+    'Graphite Grey Metallic',
+    'Jet Black Mica',
+    'Jet Black Metallic',
+    'Lunar Blue Mica (Destinator)',
+    'Energetic Yellow Metallic (Xforce)',
+    'Red Metallic (Xforce)',
+    'Red Diamond (Xpander)',
+    'Green Bronze Metallic (Xpander Cross)',
+    // Warna Solid & Armada
+    'White Solid',
+    'Black',
+    // Warna Premium Khusus
+    'White Diamond (Triton Ultimate)',
+    'Deep Bronze Metallic',
+    // Kombinasi Eksterior
+    'Two-Tone (Atap Hitam)',
 ];
 
 // Generate year options (current year - 1 to current year + 1)
 const currentYear = new Date().getFullYear();
-const YEAR_OPTIONS = [currentYear - 1, currentYear, currentYear + 1];
+const YEAR_OPTIONS = [currentYear - 2, currentYear, currentYear + 1];
 
 // Generate time options (07:00 - 23:00)
 const TIME_OPTIONS = [];
@@ -440,18 +475,26 @@ export default function SalesForm() {
                             </div>
                         )}
 
-                        {/* Surat Jalan Checkbox */}
-                        <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                            <input
-                                type="checkbox"
-                                id="suratJalan"
-                                checked={formData.givenSuratJalan}
-                                onChange={(e) => updateField('givenSuratJalan', e.target.checked)}
-                                className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                            />
-                            <label htmlFor="suratJalan" className="text-sm font-bold text-slate-700 cursor-pointer">
-                                Diberikan Surat Jalan
+                        {/* Surat Jalan Radio */}
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 ml-1 mb-1 block">
+                                DIBERIKAN SURAT JALAN
                             </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {[{ value: true, label: 'Ya' }, { value: false, label: 'Tidak' }].map(option => (
+                                    <button
+                                        key={option.label}
+                                        type="button"
+                                        onClick={() => updateField('givenSuratJalan', option.value)}
+                                        className={`p-3 rounded-xl border font-bold text-sm transition-all flex items-center justify-center gap-2 ${formData.givenSuratJalan === option.value
+                                            ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+                                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        {option.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {/* BBN Warning */}
