@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, CheckCircle, AlertCircle, FileEdit } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, FileEdit, Bell, Truck, Package } from 'lucide-react';
 
 const STATUS_CONFIG = {
     DRAFT: {
@@ -21,6 +21,21 @@ const STATUS_CONFIG = {
         label: 'Perlu Revisi',
         color: 'bg-red-50 text-red-700 border-red-200',
         icon: AlertCircle,
+    },
+    BUTUH_KONFIRMASI_KESIAPAN: {
+        label: 'Butuh Konfirmasi',
+        color: 'bg-orange-50 text-orange-700 border-orange-200',
+        icon: Bell,
+    },
+    SIAP_KIRIM: {
+        label: 'Siap Kirim',
+        color: 'bg-blue-50 text-blue-700 border-blue-200',
+        icon: Truck,
+    },
+    PDI_MATCHED: {
+        label: 'PDI Matched',
+        color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        icon: Package,
     },
 };
 

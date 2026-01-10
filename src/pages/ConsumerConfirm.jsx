@@ -78,11 +78,14 @@ export default function ConsumerConfirm() {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
-        return new Date(dateStr).toLocaleDateString('id-ID', {
+        const date = new Date(dateStr);
+        const options = {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
-        });
+        };
+        // Hanya ambil bagian tanggal, buang waktu jika ada
+        return date.toLocaleDateString('id-ID', options).split(' pukul')[0];
     };
 
     return (

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { loadSPKRecords, saveSPKRecords, loadSPKPromises, saveSPKPromises } from '../utils/storage';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import * as api from '../services/api';
 
 const SPKContext = createContext();
 
@@ -13,28 +13,69 @@ export function SPKProvider({ children }) {
     const [currentSPK, setCurrentSPK] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Load data from localStorage on mount
-    useEffect(() => {
-        const records = loadSPKRecords();
-        const promises = loadSPKPromises();
-        setSpkRecords(records);
-        setSpkPromises(promises);
-        setLoading(false);
+    // Load data from API on mount
+    const refreshData = useCallback(async () => {
+        try {
+            setLoading(true);
+            const records = await api.fetchSPKRecords();
+            setSpkRecords(records);
+
+            // Load all promises
+            const allPromises = [];
+            for (const record of records) {
+                const promises = await api.fetchPromisesBySPKId(record.id);
+                allPromises.push(...promises);
+            }
+            setSpkPromises(allPromises);
+        } catch (error) {
+            console.error('Error loading data:', error);
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
-    // Save records when changed
     useEffect(() => {
-        if (!loading) {
-            saveSPKRecords(spkRecords);
-        }
-    }, [spkRecords, loading]);
+        refreshData();
+    }, [refreshData]);
 
-    // Save promises when changed
+    // Check H-5 delivery alerts on load and update status
     useEffect(() => {
-        if (!loading) {
-            saveSPKPromises(spkPromises);
-        }
-    }, [spkPromises, loading]);
+        const checkAlerts = async () => {
+            if (loading || spkRecords.length === 0) return;
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            let hasUpdates = false;
+
+            for (const record of spkRecords) {
+                if (record.status !== 'VALID') continue;
+                if (!record.estimatedDeliveryDate) continue;
+
+                const deliveryDate = new Date(record.estimatedDeliveryDate);
+                deliveryDate.setHours(0, 0, 0, 0);
+
+                const diffTime = deliveryDate.getTime() - today.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays <= 5 && diffDays >= 0) {
+                    try {
+                        await api.updateSPKRecord(record.id, {
+                            status: 'BUTUH_KONFIRMASI_KESIAPAN',
+                        });
+                        hasUpdates = true;
+                    } catch (error) {
+                        console.error('Error updating status:', error);
+                    }
+                }
+            }
+
+            if (hasUpdates) {
+                refreshData();
+            }
+        };
+
+        checkAlerts();
+    }, [loading, spkRecords.length]);
 
     // Generate unique ID
     const generateId = () => {
@@ -42,66 +83,53 @@ export function SPKProvider({ children }) {
     };
 
     // Check if SPK number already exists
-    const isSPKNumberUnique = (spkNo, excludeId = null) => {
-        return !spkRecords.some(r => r.spkNo === spkNo && r.id !== excludeId);
+    const isSPKNumberUnique = async (spkNo, excludeId = null) => {
+        try {
+            return await api.checkSPKNumberUnique(spkNo, excludeId);
+        } catch (error) {
+            console.error('Error checking SPK number:', error);
+            return true;
+        }
     };
 
-    // Create new SPK record
-    const createSPK = (data) => {
-        const id = generateId();
-        const newRecord = {
-            id,
-            userId: 'SALES_001', // In production, get from auth
-            custName: data.custName,
-            waNo: data.waNo,
-            altPhone: data.altPhone || '',
-            // Unit details
-            unitType: data.unitType,
-            color: data.color,
-            unitYear: data.unitYear,
-            unitQty: data.unitQty || 1,
-            paymentMethod: data.paymentMethod,
-            spkNo: data.spkNo,
-            spkImage: data.spkImage,
-            consumerPhoto: data.consumerPhoto || null, // Changed from ktpImage
-            signature: null,
-            estimatedDeliveryDate: data.estimatedDeliveryDate,
-            estimatedDeliveryTime: data.estimatedDeliveryTime || '10:00',
-            // Administration
-            stnkType: data.stnkType || 'normal',
-            stnkDays: data.stnkDays || '',
-            nopolType: data.nopolType || 'bebas',
-            nopolPilihan: data.nopolPilihan || '',
-            givenSuratJalan: data.givenSuratJalan || false,
-            // Status
-            status: 'DRAFT', // Will become PENDING_VALIDATION after consumer signs
-            validationNote: '',
-            validatedAt: null,
-            createdAt: new Date().toISOString(),
-            chassisNo: '',
-            engineNo: '',
-        };
+    // Get records with alerts (H-5 or less)
+    const getAlertRecords = () => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-        // Add promises
-        const newPromises = data.promises.map(p => ({
-            id: generateId(),
-            spkId: id,
-            promiseText: p.text,
-            confirmed: false,
-        }));
+        return spkRecords.filter(record => {
+            if (!record.estimatedDeliveryDate) return false;
+            const deliveryDate = new Date(record.estimatedDeliveryDate);
+            deliveryDate.setHours(0, 0, 0, 0);
+            const diffTime = deliveryDate.getTime() - today.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays <= 5 && diffDays >= 0;
+        });
+    };
 
-        setSpkRecords(prev => [...prev, newRecord]);
-        setSpkPromises(prev => [...prev, ...newPromises]);
-        setCurrentSPK(newRecord);
-
-        return id;
+    // Create new SPK
+    const createSPK = async (data) => {
+        try {
+            const result = await api.createSPKRecord(data);
+            await refreshData();
+            return result.id;
+        } catch (error) {
+            console.error('Error creating SPK:', error);
+            throw error;
+        }
     };
 
     // Update SPK record
-    const updateSPK = (id, updates) => {
-        setSpkRecords(prev =>
-            prev.map(r => r.id === id ? { ...r, ...updates } : r)
-        );
+    const updateSPK = async (id, updates) => {
+        try {
+            await api.updateSPKRecord(id, updates);
+            setSpkRecords(prev =>
+                prev.map(r => r.id === id ? { ...r, ...updates } : r)
+            );
+        } catch (error) {
+            console.error('Error updating SPK:', error);
+            throw error;
+        }
     };
 
     // Get SPK by ID
@@ -115,45 +143,81 @@ export function SPKProvider({ children }) {
     };
 
     // Update promise confirmation
-    const confirmPromise = (promiseId, confirmed) => {
-        setSpkPromises(prev =>
-            prev.map(p => p.id === promiseId ? { ...p, confirmed } : p)
-        );
+    const confirmPromise = async (promiseId, confirmed) => {
+        try {
+            await api.confirmPromise(promiseId, confirmed);
+            setSpkPromises(prev =>
+                prev.map(p => p.id === promiseId ? { ...p, confirmed } : p)
+            );
+        } catch (error) {
+            console.error('Error confirming promise:', error);
+            throw error;
+        }
+    };
+
+    // Update all promises for an SPK (for edit)
+    const updatePromises = async (spkId, newPromises) => {
+        try {
+            await api.updatePromisesForSPK(spkId, newPromises);
+            // Refresh promises
+            const updatedPromises = await api.fetchPromisesBySPKId(spkId);
+            setSpkPromises(prev => [
+                ...prev.filter(p => p.spkId !== spkId),
+                ...updatedPromises
+            ]);
+        } catch (error) {
+            console.error('Error updating promises:', error);
+            throw error;
+        }
     };
 
     // Submit SPK (after consumer signs)
-    const submitSPK = (id, signature) => {
-        updateSPK(id, {
-            signature,
-            status: 'PENDING_VALIDATION',
+    const submitSPK = async (id, signature) => {
+        await updateSPK(id, {
+            status: 'SUBMITTED',
+            consumerSignature: signature,
         });
     };
 
-    // Manager actions
-    const approveSPK = (id, note = '') => {
-        updateSPK(id, {
+    // Manager approves SPK
+    const approveSPK = async (id) => {
+        await updateSPK(id, {
             status: 'VALID',
-            validationNote: note,
-            validatedAt: new Date().toISOString(),
         });
     };
 
-    const rejectSPK = (id, note) => {
-        updateSPK(id, {
-            status: 'REVISE',
-            validationNote: note,
-            validatedAt: new Date().toISOString(),
+    // Manager rejects SPK
+    const rejectSPK = async (id, reason) => {
+        await updateSPK(id, {
+            status: 'REJECTED',
+            rejectReason: reason,
         });
     };
 
-    // Update Surat Jalan data
-    const updateSuratJalan = (id, chassisNo, engineNo) => {
-        updateSPK(id, { chassisNo, engineNo });
+    // Confirm kesiapan (after checklist confirmed)
+    const confirmKesiapan = async (id, checklistData) => {
+        await updateSPK(id, {
+            status: 'SIAP_KIRIM',
+            kesiapanConfirmedAt: new Date().toISOString(),
+        });
     };
 
-    // Get filtered records
+    // Match PDI data
+    const matchPDI = async (id, chassisNo, engineNo) => {
+        await updateSPK(id, {
+            status: 'PDI_MATCHED',
+            chassisNo,
+            engineNo,
+        });
+    };
+
+    // Update surat jalan
+    const updateSuratJalan = async (id, data) => {
+        await updateSPK(id, data);
+    };
+
+    // Get records by status
     const getRecordsByStatus = (status) => {
-        if (!status || status === 'ALL') return spkRecords;
         return spkRecords.filter(r => r.status === status);
     };
 
@@ -162,8 +226,11 @@ export function SPKProvider({ children }) {
         return {
             total: spkRecords.length,
             pending: spkRecords.filter(r => r.status === 'PENDING_VALIDATION').length,
+            submitted: spkRecords.filter(r => r.status === 'SUBMITTED').length,
             valid: spkRecords.filter(r => r.status === 'VALID').length,
-            revise: spkRecords.filter(r => r.status === 'REVISE').length,
+            butuhKonfirmasiKesiapan: spkRecords.filter(r => r.status === 'BUTUH_KONFIRMASI_KESIAPAN').length,
+            siapKirim: spkRecords.filter(r => r.status === 'SIAP_KIRIM').length,
+            pdiMatched: spkRecords.filter(r => r.status === 'PDI_MATCHED').length,
         };
     };
 
@@ -173,18 +240,23 @@ export function SPKProvider({ children }) {
         currentSPK,
         setCurrentSPK,
         loading,
+        refreshData,
         isSPKNumberUnique,
         createSPK,
         updateSPK,
         getSPKById,
         getPromisesBySPKId,
         confirmPromise,
+        updatePromises,
         submitSPK,
         approveSPK,
         rejectSPK,
+        confirmKesiapan,
+        matchPDI,
         updateSuratJalan,
         getRecordsByStatus,
         getStats,
+        getAlertRecords,
     };
 
     return (

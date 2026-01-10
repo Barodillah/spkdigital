@@ -1,34 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    FileText,
-    Download,
-    Eye,
-    ArrowLeft,
-    Truck,
+    Package,
     Hash,
     CheckCircle,
+    User,
+    Truck,
+    ArrowRight,
+    FileText,
+    AlertTriangle,
     UserCheck,
     Users
 } from 'lucide-react';
 import Header from '../components/Header';
 import StatusBadge from '../components/StatusBadge';
 import { useSPK } from '../contexts/SPKContext';
-import { validateSuratJalanForm } from '../utils/validation';
-import { downloadSuratJalan, previewSuratJalan } from '../utils/pdfGenerator';
 
-export default function SuratJalan() {
+export default function PDIMatching() {
     const { spkId } = useParams();
     const navigate = useNavigate();
-    const { getSPKById, getPromisesBySPKId, updateSuratJalan } = useSPK();
+    const { getSPKById, matchPDI } = useSPK();
 
     const [spk, setSpk] = useState(null);
-    const [promises, setPromises] = useState([]);
     const [chassisNo, setChassisNo] = useState('');
     const [engineNo, setEngineNo] = useState('');
     const [errors, setErrors] = useState({});
     const [notif, setNotif] = useState(null);
-    const [previewUrl, setPreviewUrl] = useState(null);
 
     useEffect(() => {
         const data = getSPKById(spkId);
@@ -36,59 +33,51 @@ export default function SuratJalan() {
             navigate('/manager');
             return;
         }
-        // Allow access for PDI_MATCHED status (or VALID for backward compatibility)
-        if (data.status !== 'PDI_MATCHED' && data.status !== 'VALID') {
+        if (data.status !== 'SIAP_KIRIM') {
             navigate(`/manager/validate/${spkId}`);
             return;
         }
         setSpk(data);
-        setPromises(getPromisesBySPKId(spkId));
         setChassisNo(data.chassisNo || '');
         setEngineNo(data.engineNo || '');
-    }, [spkId, getSPKById, getPromisesBySPKId, navigate]);
+    }, [spkId, getSPKById, navigate]);
 
     const notify = (msg, type = 'success') => {
         setNotif({ msg, type });
         setTimeout(() => setNotif(null), 3000);
     };
 
-    const handlePreview = () => {
-        const validation = validateSuratJalanForm({ chassisNo, engineNo });
-        if (!validation.isValid) {
-            setErrors(validation.errors);
-            notify('Lengkapi No. Rangka dan No. Mesin', 'error');
-            return;
+    const validateForm = () => {
+        const newErrors = {};
+        if (!chassisNo.trim()) {
+            newErrors.chassisNo = 'Nomor rangka wajib diisi';
+        } else if (chassisNo.length < 10) {
+            newErrors.chassisNo = 'Nomor rangka minimal 10 karakter';
         }
-
-        // Save to SPK
-        updateSuratJalan(spkId, chassisNo, engineNo);
-
-        // Generate preview
-        const updatedSpk = { ...spk, chassisNo, engineNo };
-        const url = previewSuratJalan(updatedSpk, promises);
-        setPreviewUrl(url);
+        if (!engineNo.trim()) {
+            newErrors.engineNo = 'Nomor mesin wajib diisi';
+        } else if (engineNo.length < 5) {
+            newErrors.engineNo = 'Nomor mesin minimal 5 karakter';
+        }
+        return newErrors;
     };
 
-    const handleDownload = () => {
-        const validation = validateSuratJalanForm({ chassisNo, engineNo });
-        if (!validation.isValid) {
-            setErrors(validation.errors);
-            notify('Lengkapi No. Rangka dan No. Mesin', 'error');
+    const handleMatch = () => {
+        const validationErrors = validateForm();
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+            notify('Lengkapi data PDI dengan benar', 'error');
             return;
         }
 
-        // Save to SPK
-        updateSuratJalan(spkId, chassisNo, engineNo);
-
-        // Download PDF
-        const updatedSpk = { ...spk, chassisNo, engineNo };
-        downloadSuratJalan(updatedSpk, promises);
-        notify('Surat Jalan berhasil diunduh!');
+        matchPDI(spkId, chassisNo, engineNo);
+        notify('Data PDI berhasil di-matching!');
+        setTimeout(() => navigate(`/manager/surat-jalan/${spkId}`), 1500);
     };
 
     const updateField = (field, value) => {
-        if (field === 'chassisNo') setChassisNo(value);
-        if (field === 'engineNo') setEngineNo(value);
+        if (field === 'chassisNo') setChassisNo(value.toUpperCase());
+        if (field === 'engineNo') setEngineNo(value.toUpperCase());
         if (errors[field]) {
             setErrors(prev => ({ ...prev, [field]: null }));
         }
@@ -115,8 +104,8 @@ export default function SuratJalan() {
             <Header
                 isManager
                 showBack
-                backTo={`/manager/validate/${spkId}`}
-                title="SURAT JALAN"
+                backTo="/manager"
+                title="PDI MATCHING"
                 subtitle={`SPK #${spk.spkNo}`}
             />
 
@@ -124,9 +113,24 @@ export default function SuratJalan() {
                 {/* Status */}
                 <div className="flex items-center justify-between">
                     <StatusBadge status={spk.status} size="lg" />
-                    <div className="flex items-center gap-2 text-green-600">
+                    <div className="flex items-center gap-2 text-blue-600">
                         <Truck size={18} />
                         <span className="text-sm font-bold">Siap Kirim</span>
+                    </div>
+                </div>
+
+                {/* Info Banner */}
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                    <div className="flex items-start gap-3">
+                        <Package size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-sm font-bold text-blue-800 mb-1">
+                                Matching Data PDI
+                            </p>
+                            <p className="text-xs text-blue-700">
+                                Input nomor rangka dan nomor mesin dari data PDI yang diterima untuk melengkapi dokumen surat jalan.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -172,20 +176,16 @@ export default function SuratJalan() {
                             <p className="text-sm font-medium text-slate-700">{spk.color}</p>
                         </div>
                         <div>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase">Metode Bayar</p>
-                            <p className="text-sm font-medium text-slate-700">{spk.paymentMethod}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">Tahun</p>
+                            <p className="text-sm font-medium text-slate-700">{spk.unitYear}</p>
                         </div>
-                    </div>
-                    <div className="mt-3 pt-3 border-t border-slate-100">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">Alamat Pengiriman</p>
-                        <p className="text-sm font-medium text-slate-700">{spk.address}</p>
                     </div>
                 </div>
 
-                {/* Vehicle Data Form */}
+                {/* PDI Data Form */}
                 <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
                     <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <Hash size={14} /> Data Kendaraan
+                        <Hash size={14} /> Data PDI
                     </h2>
                     <div className="space-y-4">
                         <div>
@@ -198,8 +198,11 @@ export default function SuratJalan() {
                                 className={`w-full p-4 bg-slate-50 border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none font-mono font-bold uppercase ${errors.chassisNo ? 'border-red-300 bg-red-50' : 'border-slate-100'
                                     }`}
                                 value={chassisNo}
-                                onChange={(e) => updateField('chassisNo', e.target.value.toUpperCase())}
+                                onChange={(e) => updateField('chassisNo', e.target.value)}
                             />
+                            {errors.chassisNo && (
+                                <p className="text-xs text-red-500 mt-1 ml-1">{errors.chassisNo}</p>
+                            )}
                         </div>
                         <div>
                             <label className="text-xs font-bold text-slate-500 ml-1 mb-1 block">
@@ -211,66 +214,43 @@ export default function SuratJalan() {
                                 className={`w-full p-4 bg-slate-50 border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none font-mono font-bold uppercase ${errors.engineNo ? 'border-red-300 bg-red-50' : 'border-slate-100'
                                     }`}
                                 value={engineNo}
-                                onChange={(e) => updateField('engineNo', e.target.value.toUpperCase())}
+                                onChange={(e) => updateField('engineNo', e.target.value)}
                             />
+                            {errors.engineNo && (
+                                <p className="text-xs text-red-500 mt-1 ml-1">{errors.engineNo}</p>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                {/* Legal Note */}
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-                    <p className="text-sm font-bold text-amber-800 mb-1">⚠️ Catatan Penting</p>
-                    <p className="text-xs text-amber-700">
-                        Surat Jalan ini akan mencantumkan bahwa unit dikirim dalam kondisi
-                        STNK masih dalam proses penerbitan oleh pihak berwenang.
-                    </p>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="grid grid-cols-2 gap-4">
-                    <button
-                        onClick={handlePreview}
-                        className="py-4 rounded-2xl border-2 border-blue-200 bg-blue-50 text-blue-600 font-bold text-base flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
-                    >
-                        <Eye size={20} /> Preview
-                    </button>
-                    <button
-                        onClick={handleDownload}
-                        className="py-4 rounded-2xl bg-green-600 text-white font-bold text-base flex items-center justify-center gap-2 hover:bg-green-700 transition-colors shadow-lg"
-                    >
-                        <Download size={20} /> Download PDF
-                    </button>
-                </div>
-
-                {/* PDF Preview */}
-                {previewUrl && (
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div className="bg-slate-100 p-3 flex items-center justify-between border-b">
-                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                Preview Surat Jalan
-                            </span>
-                            <button
-                                onClick={() => setPreviewUrl(null)}
-                                className="text-xs text-slate-400 hover:text-slate-600"
-                            >
-                                Tutup
-                            </button>
-                        </div>
-                        <iframe
-                            src={previewUrl}
-                            className="w-full h-[500px]"
-                            title="Surat Jalan Preview"
-                        />
+                {/* Validation Note */}
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                    <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-bold text-amber-800 mb-1">Pastikan Data Benar</p>
+                        <p className="text-xs text-amber-700">
+                            Data nomor rangka dan mesin akan digunakan untuk cetak surat jalan resmi. Pastikan sesuai dengan dokumen PDI yang diterima.
+                        </p>
                     </div>
-                )}
+                </div>
+
+                {/* Match Button */}
+                <button
+                    onClick={handleMatch}
+                    className="w-full py-5 rounded-2xl bg-emerald-600 text-white font-bold text-lg flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-lg"
+                >
+                    <CheckCircle size={22} />
+                    MATCHING PDI
+                    <ArrowRight size={20} />
+                </button>
 
                 {/* Back Link */}
                 <div className="text-center pt-4">
                     <button
                         onClick={() => navigate('/manager')}
-                        className="text-sm text-slate-400 font-bold hover:text-slate-600 transition-colors flex items-center gap-1 mx-auto"
+                        className="text-sm text-slate-400 font-bold hover:text-slate-600 transition-colors"
                     >
-                        <ArrowLeft size={14} /> Kembali ke Dashboard
+                        ← Kembali ke Dashboard
                     </button>
                 </div>
             </main>

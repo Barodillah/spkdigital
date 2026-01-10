@@ -9,6 +9,10 @@ import SuccessPage from './pages/SuccessPage';
 import ManagerDashboard from './pages/ManagerDashboard';
 import ManagerValidation from './pages/ManagerValidation';
 import SuratJalan from './pages/SuratJalan';
+import KesiapanConfirm from './pages/KesiapanConfirm';
+import PDIMatching from './pages/PDIMatching';
+import SPVManagement from './pages/SPVManagement';
+import SPKEdit from './pages/SPKEdit';
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -60,7 +64,11 @@ export default function App() {
                         {/* Manager Flow */}
                         <Route path="/manager" element={<ManagerDashboard />} />
                         <Route path="/manager/validate/:spkId" element={<ManagerValidation />} />
+                        <Route path="/manager/edit/:spkId" element={<SPKEdit />} />
+                        <Route path="/manager/konfirmasi-kesiapan/:spkId" element={<KesiapanConfirm />} />
+                        <Route path="/manager/pdi-matching/:spkId" element={<PDIMatching />} />
                         <Route path="/manager/surat-jalan/:spkId" element={<SuratJalan />} />
+                        <Route path="/manager/spv" element={<SPVManagement />} />
 
                         {/* Fallback */}
                         <Route path="*" element={<Navigate to="/" replace />} />
@@ -70,3 +78,4 @@ export default function App() {
         </ErrorBoundary>
     );
 }
+

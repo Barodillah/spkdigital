@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Search,
@@ -8,7 +8,11 @@ import {
     AlertCircle,
     FileText,
     Users,
-    TrendingUp
+    TrendingUp,
+    Bell,
+    Truck,
+    Package,
+    Settings
 } from 'lucide-react';
 import Header from '../components/Header';
 import SPKCard from '../components/SPKCard';
@@ -18,17 +22,21 @@ const STATUS_FILTERS = [
     { value: 'ALL', label: 'Semua', icon: FileText },
     { value: 'PENDING_VALIDATION', label: 'Pending', icon: Clock },
     { value: 'VALID', label: 'Valid', icon: CheckCircle },
+    { value: 'BUTUH_KONFIRMASI_KESIAPAN', label: 'H-5 Alert', icon: Bell },
+    { value: 'SIAP_KIRIM', label: 'Siap Kirim', icon: Truck },
+    { value: 'PDI_MATCHED', label: 'PDI OK', icon: Package },
     { value: 'REVISE', label: 'Revisi', icon: AlertCircle },
 ];
 
 export default function ManagerDashboard() {
     const navigate = useNavigate();
-    const { spkRecords, getStats, loading } = useSPK();
+    const { spkRecords, getStats, loading, getAlertRecords } = useSPK();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
 
     const stats = getStats();
+    const alertRecords = getAlertRecords();
 
     const filteredRecords = useMemo(() => {
         let records = [...spkRecords];
@@ -54,6 +62,19 @@ export default function ManagerDashboard() {
         return records;
     }, [spkRecords, statusFilter, searchQuery]);
 
+    const getStatusCount = (statusValue) => {
+        if (statusValue === 'ALL') return stats.total;
+        const statusMap = {
+            'PENDING_VALIDATION': stats.pending,
+            'VALID': stats.valid,
+            'REVISE': stats.revise,
+            'BUTUH_KONFIRMASI_KESIAPAN': stats.butuhKonfirmasi,
+            'SIAP_KIRIM': stats.siapKirim,
+            'PDI_MATCHED': stats.pdiMatched,
+        };
+        return statusMap[statusValue] || 0;
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-100 flex items-center justify-center">
@@ -71,7 +92,32 @@ export default function ManagerDashboard() {
             />
 
             <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-                {/* Stats Cards */}
+                {/* H-5 Alert Banner */}
+                {alertRecords.length > 0 && (
+                    <div className="bg-orange-100 border-2 border-orange-300 rounded-2xl p-4 animate-pulse-slow">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                <Bell size={20} className="text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-sm font-black text-orange-800">
+                                    {alertRecords.length} SPK Butuh Konfirmasi Kesiapan!
+                                </h3>
+                                <p className="text-xs text-orange-700">
+                                    H-5 atau kurang sebelum tanggal pengiriman
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setStatusFilter('BUTUH_KONFIRMASI_KESIAPAN')}
+                                className="px-4 py-2 bg-orange-500 text-white rounded-xl font-bold text-xs hover:bg-orange-600 transition-colors"
+                            >
+                                Lihat
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Stats Cards - Updated */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
                         <div className="flex items-center gap-2 text-slate-400 mb-1">
@@ -89,20 +135,20 @@ export default function ManagerDashboard() {
                         <p className="text-2xl font-black text-amber-700">{stats.pending}</p>
                     </div>
 
-                    <div className="bg-green-50 rounded-2xl p-4 border border-green-200">
-                        <div className="flex items-center gap-2 text-green-600 mb-1">
-                            <CheckCircle size={14} />
-                            <span className="text-[10px] font-bold uppercase tracking-wider">Valid</span>
+                    <div className="bg-orange-50 rounded-2xl p-4 border border-orange-200">
+                        <div className="flex items-center gap-2 text-orange-600 mb-1">
+                            <Bell size={14} />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">H-5 Alert</span>
                         </div>
-                        <p className="text-2xl font-black text-green-700">{stats.valid}</p>
+                        <p className="text-2xl font-black text-orange-700">{stats.butuhKonfirmasi || 0}</p>
                     </div>
 
-                    <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
-                        <div className="flex items-center gap-2 text-red-600 mb-1">
-                            <AlertCircle size={14} />
-                            <span className="text-[10px] font-bold uppercase tracking-wider">Revisi</span>
+                    <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-200">
+                        <div className="flex items-center gap-2 text-emerald-600 mb-1">
+                            <Package size={14} />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">PDI OK</span>
                         </div>
-                        <p className="text-2xl font-black text-red-700">{stats.revise}</p>
+                        <p className="text-2xl font-black text-emerald-700">{stats.pdiMatched || 0}</p>
                     </div>
                 </div>
 
@@ -125,17 +171,15 @@ export default function ManagerDashboard() {
                         {STATUS_FILTERS.map(filter => {
                             const Icon = filter.icon;
                             const isActive = statusFilter === filter.value;
-                            const count = filter.value === 'ALL'
-                                ? stats.total
-                                : stats[filter.value.toLowerCase().replace('_validation', '')] || 0;
+                            const count = getStatusCount(filter.value);
 
                             return (
                                 <button
                                     key={filter.value}
                                     onClick={() => setStatusFilter(filter.value)}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs whitespace-nowrap transition-all ${isActive
-                                            ? 'bg-slate-800 text-white'
-                                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                        ? 'bg-slate-800 text-white'
+                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                                         }`}
                                 >
                                     <Icon size={14} />
@@ -178,8 +222,16 @@ export default function ManagerDashboard() {
                     )}
                 </div>
 
-                {/* Quick Link */}
-                <div className="text-center pt-4">
+                {/* Quick Links */}
+                <div className="flex items-center justify-center gap-4 pt-4">
+                    <button
+                        onClick={() => navigate('/manager/spv')}
+                        className="text-sm text-blue-600 font-bold hover:text-blue-700 transition-colors flex items-center gap-1"
+                    >
+                        <Settings size={14} />
+                        Kelola Data SPV
+                    </button>
+                    <span className="text-slate-300">|</span>
                     <button
                         onClick={() => navigate('/')}
                         className="text-sm text-slate-400 font-bold hover:text-slate-600 transition-colors"
@@ -191,3 +243,4 @@ export default function ManagerDashboard() {
         </div>
     );
 }
+

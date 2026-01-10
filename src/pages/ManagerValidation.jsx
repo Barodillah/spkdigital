@@ -16,7 +16,9 @@ import {
     ArrowRight,
     MessageSquare,
     FileCheck,
-    Car
+    Car,
+    UserCheck,
+    Users
 } from 'lucide-react';
 import Header from '../components/Header';
 import StatusBadge from '../components/StatusBadge';
@@ -77,13 +79,14 @@ export default function ManagerValidation() {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
-        return new Date(dateStr).toLocaleDateString('id-ID', {
+        const date = new Date(dateStr);
+        const options = {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
+        };
+        // Hanya ambil bagian tanggal, buang waktu jika ada
+        return date.toLocaleDateString('id-ID', options).split(' pukul')[0];
     };
 
     const canValidate = spk.status === 'PENDING_VALIDATION';
@@ -189,6 +192,36 @@ export default function ManagerValidation() {
                             <FileText size={14} /> Data Input Sales
                         </h2>
 
+                        {/* Sales & SPV Info */}
+                        {(spk.salesName || spk.spvName) && (
+                            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-4 border border-blue-100">
+                                <div className="flex items-center gap-6">
+                                    {spk.salesName && (
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                                <UserCheck size={16} className="text-blue-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase">Sales</p>
+                                                <p className="text-sm font-bold text-slate-800">{spk.salesName}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {spk.spvName && (
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                                <Users size={16} className="text-purple-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase">SPV</p>
+                                                <p className="text-sm font-bold text-slate-800">{spk.spvName}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Customer Info */}
                         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
                             <div className="flex items-start gap-3">
@@ -226,7 +259,7 @@ export default function ManagerValidation() {
                                 <div>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase">Estimasi Kirim</p>
                                     <p className="text-sm font-medium text-slate-700 flex items-center gap-1">
-                                        {formatDate(spk.estimatedDeliveryDate).split(',')[0]}
+                                        {formatDate(spk.estimatedDeliveryDate)}
                                         <Clock size={12} className="ml-1" />
                                         {spk.estimatedDeliveryTime}
                                     </p>
@@ -364,11 +397,37 @@ export default function ManagerValidation() {
                     </div>
                 )}
 
-                {/* Surat Jalan Button for Valid SPK */}
+                {/* Status-specific action buttons */}
                 {isValid && (
+                    <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
+                        <p className="text-sm text-green-700 font-medium">
+                            SPK sudah tervalidasi. Menunggu H-5 untuk konfirmasi kesiapan pengiriman.
+                        </p>
+                    </div>
+                )}
+
+                {spk.status === 'BUTUH_KONFIRMASI_KESIAPAN' && (
+                    <button
+                        onClick={() => navigate(`/manager/konfirmasi-kesiapan/${spkId}`)}
+                        className="w-full py-5 rounded-2xl bg-orange-600 text-white font-bold text-lg flex items-center justify-center gap-2 hover:bg-orange-700 transition-colors shadow-lg"
+                    >
+                        Konfirmasi Kesiapan <ArrowRight size={20} />
+                    </button>
+                )}
+
+                {spk.status === 'SIAP_KIRIM' && (
+                    <button
+                        onClick={() => navigate(`/manager/pdi-matching/${spkId}`)}
+                        className="w-full py-5 rounded-2xl bg-blue-600 text-white font-bold text-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-lg"
+                    >
+                        Input Data PDI <ArrowRight size={20} />
+                    </button>
+                )}
+
+                {spk.status === 'PDI_MATCHED' && (
                     <button
                         onClick={() => navigate(`/manager/surat-jalan/${spkId}`)}
-                        className="w-full py-5 rounded-2xl bg-blue-600 text-white font-bold text-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-lg"
+                        className="w-full py-5 rounded-2xl bg-emerald-600 text-white font-bold text-lg flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors shadow-lg"
                     >
                         Cetak Surat Jalan <ArrowRight size={20} />
                     </button>
@@ -377,3 +436,4 @@ export default function ManagerValidation() {
         </div>
     );
 }
+
