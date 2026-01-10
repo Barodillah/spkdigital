@@ -419,8 +419,12 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, async () => {
-    console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📡 API available at http://localhost:${PORT}/api\n`);
-    await testConnection();
-});
+if (require.main === module) {
+    app.listen(PORT, async () => {
+        console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+        console.log(`📡 API available at http://localhost:${PORT}/api\n`);
+        await testConnection();
+    });
+}
+
+module.exports = app;
