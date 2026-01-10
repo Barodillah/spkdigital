@@ -10,7 +10,8 @@ import {
     Calendar,
     Clock,
     FileCheck,
-    Camera
+    Camera,
+    Briefcase
 } from 'lucide-react';
 import Header from '../components/Header';
 import ImageUpload from '../components/ImageUpload';
@@ -102,11 +103,23 @@ const NOPOL_OPTIONS = [
     { value: 'pilno_sendiri', label: 'Pilno Urus Sendiri' },
 ];
 
+// SPV Options
+const SPV_OPTIONS = [
+    'Ahmad',
+    'Budi',
+    'Citra',
+    'Dewi',
+    'Eko',
+];
+
 export default function SalesForm() {
     const navigate = useNavigate();
     const { createSPK, isSPKNumberUnique } = useSPK();
 
     const [formData, setFormData] = useState({
+        // Sales Data
+        spvName: '',
+        salesName: '',
         // Customer Profile
         custName: '',
         waNo: '',
@@ -198,6 +211,45 @@ export default function SalesForm() {
             <Header status="Input Sales" />
 
             <main className="max-w-lg mx-auto px-4 mt-6 space-y-6">
+                {/* Sales Data Section */}
+                <section className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 animate-slide-up">
+                    <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-5">
+                        <Briefcase size={16} className="text-blue-500" /> Data Sales
+                    </h2>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 ml-1 mb-1 block">
+                                NAMA SPV <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative">
+                                <select
+                                    className={`w-full p-4 bg-slate-50 border rounded-2xl outline-none font-bold text-slate-700 appearance-none cursor-pointer ${errors.spvName ? 'border-red-300 bg-red-50' : 'border-slate-100'}`}
+                                    value={formData.spvName}
+                                    onChange={(e) => updateField('spvName', e.target.value)}
+                                >
+                                    <option value="" disabled>Pilih SPV</option>
+                                    {SPV_OPTIONS.map(spv => (
+                                        <option key={spv} value={spv}>{spv}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 ml-1 mb-1 block">
+                                NAMA SALES <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Nama Sales"
+                                className={`w-full p-4 bg-slate-50 border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium ${errors.salesName ? 'border-red-300 bg-red-50' : 'border-slate-100'}`}
+                                value={formData.salesName}
+                                onChange={(e) => updateField('salesName', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </section>
+
                 {/* Customer Profile Section - Removed Alamat */}
                 <section className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 animate-slide-up">
                     <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-5">
