@@ -13,6 +13,37 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ===================
+// Auth Routes
+// ===================
+
+app.post('/api/login', async (req, res) => {
+    try {
+        const { pin } = req.body;
+
+        // Simple check against users table
+        // Note: hashing is recommended for production, but using plain text as requested for 4-digit PIN
+        const [rows] = await pool.execute(
+            'SELECT * FROM users WHERE pin = ? LIMIT 1',
+            [pin]
+        );
+
+        if (rows.length > 0) {
+            res.json({
+                success: true,
+                user: {
+                    id: rows[0].id,
+                    username: rows[0].username
+                }
+            });
+        } else {
+            res.status(401).json({ success: false, error: 'PIN salah' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ===================
 // SPV Routes
 // ===================
 

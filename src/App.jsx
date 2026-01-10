@@ -50,30 +50,66 @@ class ErrorBoundary extends React.Component {
     }
 }
 
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import Login from './pages/Login';
+
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+    const { isAuthenticated, loading } = useAuth();
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+        );
+    }
+
+    if (!isAuthenticated) {
+        return <Navigate to="/login" replace />;
+    }
+
+    return children;
+};
+
 export default function App() {
     return (
         <ErrorBoundary>
             <SPKProvider>
-                <BrowserRouter>
-                    <Routes>
-                        {/* Sales Flow */}
-                        <Route path="/" element={<SalesForm />} />
-                        <Route path="/confirm/:spkId" element={<ConsumerConfirm />} />
-                        <Route path="/success/:spkId" element={<SuccessPage />} />
+                <AuthProvider>
+                    <BrowserRouter>
+                        <Routes>
+                            {/* Login */}
+                            <Route path="/login" element={<Login />} />
 
-                        {/* Manager Flow */}
-                        <Route path="/manager" element={<ManagerDashboard />} />
-                        <Route path="/manager/validate/:spkId" element={<ManagerValidation />} />
-                        <Route path="/manager/edit/:spkId" element={<SPKEdit />} />
-                        <Route path="/manager/konfirmasi-kesiapan/:spkId" element={<KesiapanConfirm />} />
-                        <Route path="/manager/pdi-matching/:spkId" element={<PDIMatching />} />
-                        <Route path="/manager/surat-jalan/:spkId" element={<SuratJalan />} />
-                        <Route path="/manager/spv" element={<SPVManagement />} />
+                            {/* Sales Flow */}
+                            <Route path="/" element={<SalesForm />} />
+                            <Route path="/confirm/:spkId" element={<ConsumerConfirm />} />
+                            <Route path="/success/:spkId" element={<SuccessPage />} />
 
-                        {/* Fallback */}
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                </BrowserRouter>
+                            {/* Manager Flow - Protected */}
+                            <Route
+                                path="/manager/*"
+                                element={
+                                    <ProtectedRoute>
+                                        <Routes>
+                                            <Route path="/" element={<ManagerDashboard />} />
+                                            <Route path="validate/:spkId" element={<ManagerValidation />} />
+                                            <Route path="edit/:spkId" element={<SPKEdit />} />
+                                            <Route path="konfirmasi-kesiapan/:spkId" element={<KesiapanConfirm />} />
+                                            <Route path="pdi-matching/:spkId" element={<PDIMatching />} />
+                                            <Route path="surat-jalan/:spkId" element={<SuratJalan />} />
+                                            <Route path="spv" element={<SPVManagement />} />
+                                        </Routes>
+                                    </ProtectedRoute>
+                                }
+                            />
+
+                            {/* Fallback */}
+                            <Route path="*" element={<Navigate to="/" replace />} />
+                        </Routes>
+                    </BrowserRouter>
+                </AuthProvider>
             </SPKProvider>
         </ErrorBoundary>
     );

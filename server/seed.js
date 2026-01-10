@@ -79,6 +79,17 @@ const createTables = async () => {
         `);
         console.log('✅ Table "kesiapan_checklist" created');
 
+        // Create Users table for PIN authentication
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(50) NOT NULL UNIQUE,
+                pin VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('✅ Table "users" created');
+
         console.log('\n✅ All tables created successfully!\n');
 
     } catch (error) {
@@ -100,7 +111,15 @@ const seedData = async () => {
         await connection.execute('DELETE FROM kesiapan_checklist');
         await connection.execute('DELETE FROM spk_records');
         await connection.execute('DELETE FROM spv');
+        await connection.execute('DELETE FROM users');
         console.log('🧹 Cleared existing data');
+
+        // Seed Users
+        await connection.execute(
+            'INSERT INTO users (username, pin) VALUES (?, ?)',
+            ['manager', '1234']
+        );
+        console.log('✅ Seeded manager user (PIN: 1234)');
 
         // Seed SPV
         const spvList = [
