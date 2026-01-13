@@ -91,6 +91,14 @@ export const updateSPKRecord = async (id, data) => {
     return res.json();
 };
 
+export const deleteSPKRecord = async (id) => {
+    const res = await fetch(`${API_URL}/spk/${id}`, {
+        method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to delete SPK');
+    return res.json();
+};
+
 // ============
 // Promises API
 // ============

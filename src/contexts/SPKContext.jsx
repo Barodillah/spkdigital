@@ -132,6 +132,18 @@ export function SPKProvider({ children }) {
         }
     };
 
+    // Delete SPK record
+    const deleteSPK = async (id) => {
+        try {
+            await api.deleteSPKRecord(id);
+            setSpkRecords(prev => prev.filter(r => r.id !== id));
+            setSpkPromises(prev => prev.filter(p => p.spkId !== id));
+        } catch (error) {
+            console.error('Error deleting SPK:', error);
+            throw error;
+        }
+    };
+
     // Get SPK by ID
     const getSPKById = (id) => {
         return spkRecords.find(r => r.id === id);
@@ -257,6 +269,7 @@ export function SPKProvider({ children }) {
         getRecordsByStatus,
         getStats,
         getAlertRecords,
+        deleteSPK,
     };
 
     return (

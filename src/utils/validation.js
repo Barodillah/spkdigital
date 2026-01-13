@@ -47,6 +47,14 @@ export function validateSalesForm(data) {
         errors.estimatedDeliveryDate = 'Estimasi tanggal pengiriman wajib diisi';
     }
 
+    if (!data.unitType?.trim()) {
+        errors.unitType = 'Tipe unit wajib dipilih';
+    }
+
+    if (!data.color?.trim()) {
+        errors.color = 'Warna wajib dipilih';
+    }
+
     // Validate percepatan STNK days
     if (data.stnkType === 'percepatan' && !data.stnkDays) {
         errors.stnkDays = 'Jumlah hari percepatan wajib diisi';

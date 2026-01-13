@@ -12,6 +12,7 @@ const createTables = async () => {
             CREATE TABLE IF NOT EXISTS spv (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(100) NOT NULL,
+                phone VARCHAR(20),
                 active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -123,17 +124,17 @@ const seedData = async () => {
 
         // Seed SPV
         const spvList = [
-            ['Ahmad', true],
-            ['Budi', true],
-            ['Citra', true],
-            ['Dewi', true],
-            ['Eko', true],
+            ['Ahmad', '08123456789', true],
+            ['Budi', '08234567890', true],
+            ['Citra', '08345678901', true],
+            ['Dewi', '08456789012', true],
+            ['Eko', '08567890123', true],
         ];
 
-        for (const [name, active] of spvList) {
+        for (const [name, phone, active] of spvList) {
             await connection.execute(
-                'INSERT INTO spv (name, active) VALUES (?, ?)',
-                [name, active]
+                'INSERT INTO spv (name, phone, active) VALUES (?, ?, ?)',
+                [name, phone, active]
             );
         }
         console.log('✅ Seeded 5 SPV records');

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
     ChevronLeft,
     User,
@@ -11,7 +11,8 @@ import {
     Send,
     AlertCircle,
     FileCheck,
-    Car
+    Car,
+    Loader2
 } from 'lucide-react';
 import Header from '../components/Header';
 import SignaturePad from '../components/SignaturePad';
@@ -20,24 +21,25 @@ import { useSPK } from '../contexts/SPKContext';
 import { getStnkLabel, getNopolLabel } from '../utils/validation';
 
 export default function ConsumerConfirm() {
-    const { spkId } = useParams();
     const navigate = useNavigate();
-    const { getSPKById, getPromisesBySPKId, confirmPromise, submitSPK } = useSPK();
+    const { currentSPK, setCurrentSPK, createSPK } = useSPK();
 
     const [spk, setSpk] = useState(null);
     const [promises, setPromises] = useState([]);
     const [signature, setSignature] = useState(null);
     const [notif, setNotif] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        const data = getSPKById(spkId);
-        if (!data) {
+        // Baca data dari currentSPK (data sementara yang belum disimpan)
+        if (!currentSPK) {
             navigate('/');
             return;
         }
-        setSpk(data);
-        setPromises(getPromisesBySPKId(spkId));
-    }, [spkId, getSPKById, getPromisesBySPKId, navigate]);
+        setSpk(currentSPK);
+        // Promises diambil langsung dari currentSPK
+        setPromises(currentSPK.promises?.map((p, i) => ({ ...p, id: i, confirmed: false })) || []);
+    }, [currentSPK, navigate]);
 
     const notify = (msg, type = 'success') => {
         setNotif({ msg, type });
@@ -45,13 +47,13 @@ export default function ConsumerConfirm() {
     };
 
     const handleConfirmPromise = (promiseId, confirmed) => {
-        confirmPromise(promiseId, confirmed);
+        // Update state lokal saja (data belum di database)
         setPromises(prev =>
             prev.map(p => p.id === promiseId ? { ...p, confirmed } : p)
         );
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         const allConfirmed = promises.length === 0 || promises.every(p => p.confirmed);
 
         if (!allConfirmed) {
@@ -64,8 +66,21 @@ export default function ConsumerConfirm() {
             return;
         }
 
-        submitSPK(spkId, signature);
-        navigate(`/success/${spkId}`);
+        setIsSubmitting(true);
+        try {
+            // Simpan data ke database dengan status SUBMITTED dan tanda tangan konsumen
+            const spkId = await createSPK({
+                ...currentSPK,
+                consumerSignature: signature,
+                status: 'SUBMITTED' // Set status langsung saat create
+            });
+            // Clear currentSPK setelah berhasil disimpan
+            setCurrentSPK(null);
+            navigate(`/success/${spkId}`);
+        } catch (error) {
+            notify('Gagal menyimpan data. Silakan coba lagi.', 'error');
+            setIsSubmitting(false);
+        }
     };
 
     if (!spk) {
@@ -245,9 +260,21 @@ export default function ConsumerConfirm() {
                         {/* Submit Button */}
                         <button
                             onClick={handleSubmit}
-                            className="w-full bg-green-600 text-white py-5 rounded-3xl font-black text-lg shadow-xl shadow-green-100 hover:bg-green-700 flex items-center justify-center gap-3 active:scale-[0.98] transition-all mt-4"
+                            disabled={isSubmitting}
+                            className={`w-full py-5 rounded-3xl font-black text-lg shadow-xl flex items-center justify-center gap-3 transition-all mt-4 ${isSubmitting
+                                ? 'bg-slate-400 text-slate-200 cursor-not-allowed'
+                                : 'bg-green-600 text-white shadow-green-100 hover:bg-green-700 active:scale-[0.98]'
+                                }`}
                         >
-                            SIMPAN & KIRIM <Send size={20} />
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 size={20} className="animate-spin" /> MENYIMPAN...
+                                </>
+                            ) : (
+                                <>
+                                    SIMPAN & KIRIM <Send size={20} />
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>

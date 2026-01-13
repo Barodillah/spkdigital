@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     User,
@@ -7,7 +7,6 @@ import {
     ArrowRight,
     Phone,
     CreditCard,
-    Calendar,
     Clock,
     FileCheck,
     Camera,
@@ -16,6 +15,7 @@ import {
 import Header from '../components/Header';
 import ImageUpload from '../components/ImageUpload';
 import PromiseList from '../components/PromiseList';
+import DateInput from '../components/DateInput';
 import { useSPK } from '../contexts/SPKContext';
 import { validateSalesForm } from '../utils/validation';
 
@@ -103,29 +103,15 @@ const NOPOL_OPTIONS = [
     { value: 'pilno_sendiri', label: 'Pilno Urus Sendiri' },
 ];
 
-// SPV Storage Key (same as SPVManagement.jsx)
-const SPV_STORAGE_KEY = 'spkdigital_spv_list';
-
-// Load active SPV list from localStorage
-const loadActiveSPVOptions = () => {
-    try {
-        const data = localStorage.getItem(SPV_STORAGE_KEY);
-        if (data) {
-            const list = JSON.parse(data);
-            return list.filter(spv => spv.active).map(spv => spv.name);
-        }
-    } catch (e) {
-        console.error('Error loading SPV list:', e);
-    }
-    // Default fallback
-    return ['Ahmad', 'Budi', 'Citra', 'Dewi', 'Eko'];
-};
+// API base URL
+const API_BASE = 'http://localhost:3001/api';
 
 export default function SalesForm() {
     const navigate = useNavigate();
-    const { createSPK, isSPKNumberUnique } = useSPK();
+    const { currentSPK, setCurrentSPK, isSPKNumberUnique } = useSPK();
 
-    const [formData, setFormData] = useState({
+    // Default form values
+    const defaultFormData = {
         // Sales Data
         spvName: '',
         salesName: '',
@@ -134,30 +120,55 @@ export default function SalesForm() {
         waNo: '',
         altPhone: '',
         // Unit Details
-        unitType: UNIT_OPTIONS[0],
-        color: COLOR_OPTIONS[0],
+        unitType: '',
+        color: '',
         unitYear: currentYear,
         unitQty: 1,
         paymentMethod: 'Cash',
         spkNo: '',
         spkImage: null,
-        consumerPhoto: null, // Changed from ktpImage
+        consumerPhoto: null,
         estimatedDeliveryDate: '',
         estimatedDeliveryTime: '10:00',
         // Administration
-        stnkType: 'normal', // 'normal' or 'percepatan'
-        stnkDays: '', // Only if percepatan
+        stnkType: 'normal',
+        stnkDays: '',
         nopolType: 'bebas',
-        nopolPilihan: '', // Only if pilno_dibantu
+        nopolPilihan: '',
         givenSuratJalan: false,
         // Promises
         promises: [],
-    });
+    };
+
+    const [formData, setFormData] = useState(defaultFormData);
+
+    // Load data from currentSPK if returning from confirmation page
+    useEffect(() => {
+        if (currentSPK) {
+            setFormData({ ...defaultFormData, ...currentSPK });
+        }
+    }, []);
 
     const [newPromise, setNewPromise] = useState('');
     const [errors, setErrors] = useState({});
     const [notif, setNotif] = useState(null);
-    const [spvOptions, setSpvOptions] = useState(loadActiveSPVOptions());
+    const [spvOptions, setSpvOptions] = useState([]);
+
+    // Load active SPV list from API
+    useEffect(() => {
+        const fetchActiveSPV = async () => {
+            try {
+                const response = await fetch(`${API_BASE}/spv/active`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setSpvOptions(data.map(spv => spv.name));
+                }
+            } catch (error) {
+                console.error('Error loading SPV list:', error);
+            }
+        };
+        fetchActiveSPV();
+    }, []);
 
     const notify = (msg, type = 'success') => {
         setNotif({ msg, type });
@@ -188,7 +199,7 @@ export default function SalesForm() {
         }));
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         const validation = validateSalesForm(formData);
 
         if (!validation.isValid) {
@@ -198,14 +209,17 @@ export default function SalesForm() {
             return;
         }
 
-        if (!isSPKNumberUnique(formData.spkNo)) {
+        const isUnique = await isSPKNumberUnique(formData.spkNo);
+        if (!isUnique) {
             setErrors({ spkNo: 'Nomor SPK sudah terdaftar' });
             notify('Nomor SPK sudah terdaftar dalam sistem', 'error');
             return;
         }
 
-        const spkId = createSPK(formData);
-        navigate(`/confirm/${spkId}`);
+        // Simpan data sementara ke context (TIDAK langsung ke database)
+        // Data akan disimpan setelah konsumen menandatangani di halaman konfirmasi
+        setCurrentSPK(formData);
+        navigate('/confirm');
     };
 
     return (
@@ -290,6 +304,7 @@ export default function SalesForm() {
                                     <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                                     <input
                                         type="tel"
+                                        inputMode="numeric"
                                         placeholder="0812xxxx"
                                         className={`w-full p-4 pl-10 bg-slate-50 border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none font-medium ${errors.waNo ? 'border-red-300 bg-red-50' : 'border-slate-100'
                                             }`}
@@ -304,6 +319,7 @@ export default function SalesForm() {
                                 </label>
                                 <input
                                     type="tel"
+                                    inputMode="numeric"
                                     placeholder="Opsional"
                                     className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none font-medium"
                                     value={formData.altPhone}
@@ -323,24 +339,30 @@ export default function SalesForm() {
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="text-xs font-bold text-slate-500 ml-1 mb-1 block">TIPE UNIT</label>
+                                <label className="text-xs font-bold text-slate-500 ml-1 mb-1 block">
+                                    TIPE UNIT <span className="text-red-500">*</span>
+                                </label>
                                 <select
-                                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold text-slate-700 appearance-none cursor-pointer"
+                                    className={`w-full p-4 bg-slate-50 border rounded-2xl outline-none font-bold text-slate-700 appearance-none cursor-pointer ${errors.unitType ? 'border-red-300 bg-red-50' : 'border-slate-100'}`}
                                     value={formData.unitType}
                                     onChange={(e) => updateField('unitType', e.target.value)}
                                 >
+                                    <option value="" disabled>Pilih Tipe Unit</option>
                                     {UNIT_OPTIONS.map(unit => (
                                         <option key={unit} value={unit}>{unit}</option>
                                     ))}
                                 </select>
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-slate-500 ml-1 mb-1 block">WARNA</label>
+                                <label className="text-xs font-bold text-slate-500 ml-1 mb-1 block">
+                                    WARNA <span className="text-red-500">*</span>
+                                </label>
                                 <select
-                                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold text-slate-700 appearance-none cursor-pointer"
+                                    className={`w-full p-4 bg-slate-50 border rounded-2xl outline-none font-bold text-slate-700 appearance-none cursor-pointer ${errors.color ? 'border-red-300 bg-red-50' : 'border-slate-100'}`}
                                     value={formData.color}
                                     onChange={(e) => updateField('color', e.target.value)}
                                 >
+                                    <option value="" disabled>Pilih Warna</option>
                                     {COLOR_OPTIONS.map(color => (
                                         <option key={color} value={color}>{color}</option>
                                     ))}
@@ -365,6 +387,7 @@ export default function SalesForm() {
                                 <label className="text-xs font-bold text-slate-500 ml-1 mb-1 block">JUMLAH UNIT</label>
                                 <input
                                     type="number"
+                                    inputMode="numeric"
                                     min="1"
                                     className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold text-slate-700"
                                     value={formData.unitQty}
@@ -399,6 +422,7 @@ export default function SalesForm() {
                             </label>
                             <input
                                 type="text"
+                                inputMode="numeric"
                                 placeholder="Ketik sesuai kertas SPK"
                                 className={`w-full p-4 bg-blue-50 border rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-mono font-black text-blue-700 ${errors.spkNo ? 'border-red-300' : 'border-blue-200'
                                     }`}
@@ -412,17 +436,13 @@ export default function SalesForm() {
                                 ESTIMASI TANGGAL & JAM KIRIM <span className="text-red-500">*</span>
                             </label>
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="relative">
-                                    <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                    <input
-                                        type="date"
-                                        className={`w-full p-4 pl-10 bg-slate-50 border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none font-medium ${errors.estimatedDeliveryDate ? 'border-red-300 bg-red-50' : 'border-slate-100'
-                                            }`}
-                                        value={formData.estimatedDeliveryDate}
-                                        onChange={(e) => updateField('estimatedDeliveryDate', e.target.value)}
-                                        min={new Date().toISOString().split('T')[0]}
-                                    />
-                                </div>
+                                <DateInput
+                                    value={formData.estimatedDeliveryDate}
+                                    onChange={(val) => updateField('estimatedDeliveryDate', val)}
+                                    placeholder="Pilih tanggal"
+                                    minDate={new Date().toISOString().split('T')[0]}
+                                    error={errors.estimatedDeliveryDate}
+                                />
                                 <div className="relative">
                                     <Clock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                                     <select
@@ -490,6 +510,7 @@ export default function SalesForm() {
                                 </label>
                                 <input
                                     type="number"
+                                    inputMode="numeric"
                                     min="1"
                                     max="13"
                                     placeholder="Masukkan jumlah hari"

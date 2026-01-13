@@ -70,12 +70,12 @@ app.get('/api/spv/active', async (req, res) => {
 // Create SPV
 app.post('/api/spv', async (req, res) => {
     try {
-        const { name, active = true } = req.body;
+        const { name, phone, active = true } = req.body;
         const [result] = await pool.execute(
-            'INSERT INTO spv (name, active) VALUES (?, ?)',
-            [name, active]
+            'INSERT INTO spv (name, phone, active) VALUES (?, ?, ?)',
+            [name, phone || null, active]
         );
-        res.json({ id: result.insertId, name, active });
+        res.json({ id: result.insertId, name, phone, active });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -85,12 +85,12 @@ app.post('/api/spv', async (req, res) => {
 app.put('/api/spv/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, active } = req.body;
+        const { name, phone, active } = req.body;
         await pool.execute(
-            'UPDATE spv SET name = ?, active = ? WHERE id = ?',
-            [name, active, id]
+            'UPDATE spv SET name = ?, phone = ?, active = ? WHERE id = ?',
+            [name, phone || null, active, id]
         );
-        res.json({ id, name, active });
+        res.json({ id: parseInt(id), name, phone, active });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -330,6 +330,23 @@ app.put('/api/spk/:id', async (req, res) => {
                 values
             );
         }
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete SPK
+app.delete('/api/spk/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Delete associated promises first
+        await pool.execute('DELETE FROM spk_promises WHERE spk_id = ?', [id]);
+
+        // Delete the SPK record
+        await pool.execute('DELETE FROM spk_records WHERE id = ?', [id]);
 
         res.json({ success: true });
     } catch (error) {

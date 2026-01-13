@@ -84,7 +84,7 @@ export default function App() {
 
                             {/* Sales Flow */}
                             <Route path="/" element={<SalesForm />} />
-                            <Route path="/confirm/:spkId" element={<ConsumerConfirm />} />
+                            <Route path="/confirm" element={<ConsumerConfirm />} />
                             <Route path="/success/:spkId" element={<SuccessPage />} />
 
                             {/* Manager Flow - Protected */}
