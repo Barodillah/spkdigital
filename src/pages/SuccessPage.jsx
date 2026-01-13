@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, ShieldCheck, MessageCircle, Plus, Smartphone } from 'lucide-react';
 import { useSPK } from '../contexts/SPKContext';
+import { getStnkLabel, getNopolLabel } from '../utils/validation';
 
 export default function SuccessPage() {
     const { spkId } = useParams();
@@ -42,15 +43,18 @@ export default function SuccessPage() {
 
 Terima kasih telah mempercayakan pembelian mobil Anda kepada kami.
 
-📋 *Detail SPK Anda:*
-• No. SPK: ${spk.spkNo}
-• Unit: ${spk.unitType}
-• Warna: ${spk.color}
-• Metode: ${spk.paymentMethod}
+*Detail SPK Anda:*
+- No. SPK: ${spk.spkNo}
+- Unit: ${spk.unitType}
+- Warna: ${spk.color}
+- Metode: ${spk.paymentMethod}
 
-${promises.length > 0 ? `🎁 *Janji yang Dikonfirmasi:*
+*Administrasi:*
+- Janji STNK: ${getStnkLabel(spk.stnkType, spk.stnkDays)}
+- Nomor Polisi: ${getNopolLabel(spk.nopolType, spk.nopolPilihan)}
+${spk.givenSuratJalan ? '- Diberikan Surat Jalan\n' : ''}${spk.stnkType === 'percepatan' || spk.nopolType !== 'bebas' ? '(Terdapat biaya tambahan yang ditagihkan pada konsumen)\n' : ''}
+${promises.length > 0 ? `*Janji yang Dikonfirmasi:*
 ${promises.map((p, i) => `${i + 1}. ${p.promiseText}`).join('\n')}` : ''}
-
 Data SPK Anda sedang dalam proses validasi oleh tim kami. Kami akan menghubungi Anda kembali setelah validasi selesai.
 
 Salam,
@@ -89,8 +93,8 @@ Tim Mitsubishi`;
 
                     {/* WA Status */}
                     <div className={`p-4 rounded-2xl border transition-all ${waStatus === 'sent'
-                            ? 'bg-green-50 border-green-200'
-                            : 'bg-slate-100 border-slate-200'
+                        ? 'bg-green-50 border-green-200'
+                        : 'bg-slate-100 border-slate-200'
                         }`}>
                         <div className="flex items-center justify-center gap-2">
                             {waStatus === 'sending' ? (

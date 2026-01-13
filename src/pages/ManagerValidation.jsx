@@ -92,6 +92,38 @@ export default function ManagerValidation() {
     const canValidate = spk.status === 'PENDING_VALIDATION';
     const isValid = spk.status === 'VALID';
 
+    // Generate WA message
+    const waMessage = spk ? `Halo ${spk.custName},
+
+Terima kasih telah mempercayakan pembelian mobil Anda kepada kami.
+
+*Detail SPK Anda:*
+- No. SPK: ${spk.spkNo}
+- Unit: ${spk.unitType}
+- Warna: ${spk.color}
+- Metode: ${spk.paymentMethod}
+
+*Administrasi:*
+- Janji STNK: ${getStnkLabel(spk.stnkType, spk.stnkDays)}
+- Nomor Polisi: ${getNopolLabel(spk.nopolType, spk.nopolPilihan)}
+${spk.givenSuratJalan ? '- Diberikan Surat Jalan\n' : ''}${spk.stnkType === 'percepatan' || spk.nopolType !== 'bebas' ? '(Terdapat biaya tambahan yang ditagihkan pada konsumen)\n' : ''}
+${promises.length > 0 ? `*Janji yang Dikonfirmasi:*
+${promises.map((p, i) => `${i + 1}. ${p.promiseText}`).join('\n')}` : ''}
+Pesan ini merupakan konfirmasi dari tim Customer Service kami. Untuk memastikan transparansi dari Tenaga Penjual kami.
+Jika data sudah sesuai, cukup membalas *Ya* atau jika ada pertanyaan lainnya bisa membalas pesan ini.
+
+Salam,
+Tim Mitsubishi` : '';
+
+    const handleOpenWA = () => {
+        if (!spk || !spk.waNo) return;
+        const phone = spk.waNo.startsWith('0')
+            ? '62' + spk.waNo.substring(1)
+            : spk.waNo;
+        const url = `https://wa.me/${phone}?text=${encodeURIComponent(waMessage)}`;
+        window.open(url, '_blank');
+    };
+
     return (
         <div className="min-h-screen bg-slate-100 pb-8">
             {/* Notification */}
@@ -241,6 +273,12 @@ export default function ManagerValidation() {
                                     )}
                                 </div>
                             </div>
+                            <button
+                                onClick={handleOpenWA}
+                                className="w-full mt-3 py-2 px-4 rounded-xl bg-green-50 text-green-700 font-bold text-xs flex items-center justify-center gap-2 hover:bg-green-100 transition-colors border border-green-200"
+                            >
+                                <MessageSquare size={14} /> KONFIRMASI BY WA
+                            </button>
                         </div>
 
                         {/* Unit Info */}
