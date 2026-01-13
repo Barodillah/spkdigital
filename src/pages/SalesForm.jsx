@@ -136,8 +136,13 @@ export default function SalesForm() {
         nopolType: 'bebas',
         nopolPilihan: '',
         givenSuratJalan: false,
-        // Promises
-        promises: [],
+        // Promises - Default promises
+        promises: [
+            { text: 'Kaca film' },
+            { text: 'Apar' },
+            { text: 'Free Service 4 tahun / 50.000 KM' },
+            { text: 'Talang air' },
+        ],
     };
 
     const [formData, setFormData] = useState(defaultFormData);
