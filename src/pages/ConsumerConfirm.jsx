@@ -219,6 +219,12 @@ export default function ConsumerConfirm() {
                                     {getNopolLabel(spk.nopolType, spk.nopolPilihan)}
                                 </span>
                             </div>
+                            {/* Additional cost warning for percepatan STNK or non-bebas nopol */}
+                            {(spk.stnkType === 'percepatan' || spk.nopolType !== 'bebas') && (
+                                <div className="bg-amber-100 border border-amber-300 rounded-xl p-3 text-xs font-bold text-amber-800">
+                                    ⚠️ Terdapat biaya tambahan yang ditagihkan pada konsumen
+                                </div>
+                            )}
                             {spk.givenSuratJalan && (
                                 <div className="flex items-center gap-2 text-sm font-bold text-green-700">
                                     <CheckCircle size={14} /> Diberikan Surat Jalan
