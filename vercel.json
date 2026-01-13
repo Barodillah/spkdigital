@@ -25,13 +25,5 @@
             "src": "/(.*)",
             "dest": "/index.html"
         }
-    ],
-    "env": {
-        "DB_CONNECTION": "mysql",
-        "DB_HOST": "153.92.15.23",
-        "DB_PORT": "3306",
-        "DB_DATABASE": "u444914729_spk",
-        "DB_USERNAME": "u444914729_spkd",
-        "DB_PASSWORD": "Bintaro.100066"
-    }
+    ]
 }
