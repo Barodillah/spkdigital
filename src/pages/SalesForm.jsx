@@ -273,7 +273,7 @@ export default function SalesForm() {
                                 placeholder="Nama Sales"
                                 className={`w-full p-4 bg-slate-50 border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium ${errors.salesName ? 'border-red-300 bg-red-50' : 'border-slate-100'}`}
                                 value={formData.salesName}
-                                onChange={(e) => updateField('salesName', e.target.value)}
+                                onChange={(e) => updateField('salesName', e.target.value.replace(/\b\w/g, l => l.toUpperCase()))}
                             />
                         </div>
                     </div>
@@ -296,7 +296,7 @@ export default function SalesForm() {
                                 className={`w-full p-4 bg-slate-50 border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium ${errors.custName ? 'border-red-300 bg-red-50' : 'border-slate-100'
                                     }`}
                                 value={formData.custName}
-                                onChange={(e) => updateField('custName', e.target.value)}
+                                onChange={(e) => updateField('custName', e.target.value.toUpperCase())}
                             />
                         </div>
 
