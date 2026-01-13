@@ -103,8 +103,8 @@ const NOPOL_OPTIONS = [
     { value: 'pilno_sendiri', label: 'Pilno Urus Sendiri' },
 ];
 
-// API base URL
-const API_BASE = 'http://localhost:3001/api';
+// API base URL - uses environment variable or fallback based on mode
+const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:3001/api');
 
 export default function SalesForm() {
     const navigate = useNavigate();
